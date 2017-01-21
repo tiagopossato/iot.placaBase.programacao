@@ -2,6 +2,7 @@
 
 #include <SPI.h>
 #include "mcp_can.h"
+#include <avr/wdt.h>
 
 #define DEBUG
 
@@ -22,19 +23,32 @@ struct MENSAGEM {
   unsigned char msg[8];
 } canMsg;
 
+/**
+   Função para resetar o programa
+   Utiliza o WatchDog Timer
+*/
+void resetSensor() {
+#if defined(DEBUG)
+  Serial.println("Reiniciando...");
+#endif
+  wdt_enable(WDTO_15MS);
+  while (1);
+}
+
 void setup()
 {
   Serial.begin(115200);
 
   inputString.reserve(20);
 
-  while (CAN_OK != CAN.begin(CAN_500KBPS))              // init can bus : baudrate = 500k
+  if (CAN_OK != CAN.begin(CAN_500KBPS))              // init can bus : baudrate = 500k
   {
 #if defined(DEBUG)
     Serial.println("CAN BUS Shield init fail");
     Serial.println(" Init CAN BUS Shield again");
+    delay(250);
+    resetSensor();
 #endif
-    delay(100);
   }
 #if defined(DEBUG)
   Serial.println("Central: CAN BUS init ok!");
@@ -91,7 +105,7 @@ void serialEvent() {
 /**
    Extrai comando da mensagem recebida e envia par a rede
    A mensagem é recebida com os parametros separados por dois pontos (:)
-   enderecoRemoto:comando:mensagem;
+   enderecoRemoto:comando:mensagem[6]
 */
 byte extraiComando() {
   uint8_t i = 0;
