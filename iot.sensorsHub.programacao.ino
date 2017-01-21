@@ -1,4 +1,4 @@
-  //https://github.com/Seeed-Studio/CAN_BUS_Shield
+//https://github.com/Seeed-Studio/CAN_BUS_Shield
 
 #include <SPI.h>
 #include "mcp_can.h"
@@ -56,7 +56,7 @@ void loop()
     Serial.print(F("{\"id\":"));
     Serial.print(canMsg.id);
     Serial.print(F(", \"msg\":["));
-    
+
     for (char i = 0; i < len; i++) {
       Serial.print(canMsg.msg[i]);
       Serial.print(F(","));
@@ -98,7 +98,7 @@ byte extraiComando() {
   struct {
     unsigned char id;
     unsigned char comando;
-    unsigned char valor;
+    unsigned char msg[6];
   } sendMsg;
 
   String tmp;
@@ -128,32 +128,39 @@ byte extraiComando() {
   if (sendMsg.comando == 0) return false;
   tmp = "";
 
-  for (; i < inputString.length(); i++) {
-    //if (i > 15)return false;
-    if (inputString[i] == ';') {
-      i++;
-      break;
+  //identifica os proximos 6 bytes da mensagem
+  for (unsigned char j = 0; j < 6; j++) {
+    for (; i < inputString.length(); i++) {
+      //if (i > 15)return false;
+      if (inputString[i] == ':') {
+        i++;
+        break;
+      }
+      tmp += inputString[i];
     }
-    tmp += inputString[i];
+    sendMsg.msg[j] = tmp.toInt();
+    tmp = "";
   }
-  sendMsg.valor = tmp.toInt();
-  if (sendMsg.valor == 0) return false;
-  tmp = "";
 
 #if defined(DEBUG)
   Serial.print(" -> sendMsg.id: ");
   Serial.println(sendMsg.id);
   Serial.print(" -> sendMsg.comando: ");
   Serial.println(sendMsg.comando);
-  Serial.print(" -> sendMsg.valor: ");
-  Serial.println(sendMsg.valor);
+  for (unsigned  char j = 0; j < 6; j++) {
+    Serial.print(" -> sendMsg.msg[");
+    Serial.print(j);
+    Serial.print("]:");
+    Serial.println(sendMsg.msg[j]);
+  }
 #endif
-
   unsigned char msg[8];
   msg[0] = sendMsg.id;
   msg[1] = sendMsg.comando;
-  msg[2] = sendMsg.valor;
-
+  for (char j = 0; j < 6; j++) {
+    msg[j + 2] = sendMsg.msg[j];
+  }
+  
   CAN.sendMsgBuf(CENTRAL_ID, 0, sizeof(msg), msg);
 
 }
