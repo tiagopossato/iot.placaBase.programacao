@@ -4,7 +4,7 @@
 #include "mcp_can.h"
 #include <avr/wdt.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define CENTRAL_ID 0x00
 String inputString = "";// a string to hold incoming data
@@ -41,7 +41,7 @@ void setup()
 
   inputString.reserve(20);
 
-  if (CAN_OK != CAN.begin(CAN_500KBPS))              // init can bus : baudrate = 500k
+  if (CAN_OK != CAN.begin(CAN_100KBPS))              // init can bus : baudrate = 500k
   {
 #if defined(DEBUG)
     Serial.println("CAN BUS Shield init fail");
