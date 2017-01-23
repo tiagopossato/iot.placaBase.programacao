@@ -20,7 +20,8 @@ MCP_CAN CAN(SPI_CS_PIN);                                    // Set CS pin
 */
 struct MENSAGEM {
   unsigned int id;
-  unsigned char msg[8];
+  unsigned char codigo;
+  unsigned char msg[7];
 } canMsg;
 
 /**
@@ -50,34 +51,39 @@ void setup()
     resetSensor();
 #endif
   }
-#if defined(DEBUG)
-  Serial.println("Central: CAN BUS init ok!");
-#endif
+
+  //envia sinal de online
+  Serial.print(F("{\"id\":"));
+  Serial.print(CENTRAL_ID);
+  Serial.print(F(", \"codigo\":1}\n"));
+
 }
 
 void loop()
 {
-
   unsigned char len = 0;
+  unsigned char rawMsg[8];
 
   if (CAN.checkReceive() == CAN_MSGAVAIL) {
 
-
-    CAN.readMsgBuf(&len, canMsg.msg);    // read data,  len: data length, buf: data buf
+    CAN.readMsgBuf(&len, rawMsg);    // read data,  len: data length, buf: data buf
 
     canMsg.id = CAN.getCanId();
+    canMsg.codigo = rawMsg[0];
+    for (char i = 1; i < len; i++) {
+      canMsg.msg[i - 1] = rawMsg[i];
+    }
 
     Serial.print(F("{\"id\":"));
     Serial.print(canMsg.id);
+    Serial.print(F(", \"codigo\":"));
+    Serial.print(canMsg.codigo);
     Serial.print(F(", \"msg\":["));
-
-    for (char i = 0; i < len; i++) {
+    for (char i = 0; i < len-1; i++) {
       Serial.print(canMsg.msg[i]);
-      Serial.print(F(","));
+      if (i < len - 2)Serial.print(F(", "));
     }
-
     Serial.print(F("]}\n"));
-
   }
 }
 
@@ -174,7 +180,7 @@ byte extraiComando() {
   for (char j = 0; j < 6; j++) {
     msg[j + 2] = sendMsg.msg[j];
   }
-  
+
   CAN.sendMsgBuf(CENTRAL_ID, 0, sizeof(msg), msg);
 
 }
