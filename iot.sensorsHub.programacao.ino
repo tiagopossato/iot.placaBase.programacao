@@ -3,6 +3,7 @@
 #include <SPI.h>
 #include "mcp_can.h"
 #include <avr/wdt.h>
+#include "overCAN.h"
 
 //#define DEBUG
 
@@ -53,10 +54,15 @@ void setup()
   }
 
   //envia sinal de online
+  isOnline();
+}
+
+void isOnline() {
   Serial.print(F("{\"id\":"));
   Serial.print(CENTRAL_ID);
-  Serial.print(F(", \"codigo\":1}\n"));
-
+  Serial.print(F(", \"codigo\":"));
+  Serial.print(ONLINE);
+  Serial.print(F("}\n"));
 }
 
 void loop()
@@ -79,7 +85,7 @@ void loop()
     Serial.print(F(", \"codigo\":"));
     Serial.print(canMsg.codigo);
     Serial.print(F(", \"msg\":["));
-    for (char i = 0; i < len-1; i++) {
+    for (char i = 0; i < len - 1; i++) {
       Serial.print(canMsg.msg[i]);
       if (i < len - 2)Serial.print(F(", "));
     }
@@ -133,7 +139,6 @@ byte extraiComando() {
     tmp += inputString[i];
   }
   sendMsg.id = tmp.toInt();
-  if (sendMsg.id == 0) return false;
   tmp = "";
 
   for (; i < inputString.length(); i++) {
@@ -181,6 +186,16 @@ byte extraiComando() {
     msg[j + 2] = sendMsg.msg[j];
   }
 
+  //verifica se a mensagem é para este dispositivo
+  if (sendMsg.id == CENTRAL_ID) {
+    switch (sendMsg.comando) {
+      case IS_ONLINE: {
+          isOnline();
+          break;
+        }
+    }
+} else {
+  //envia pela rede
   CAN.sendMsgBuf(CENTRAL_ID, 0, sizeof(msg), msg);
-
+}
 }
