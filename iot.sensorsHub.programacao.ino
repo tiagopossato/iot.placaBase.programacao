@@ -8,13 +8,15 @@
 //#define DEBUG
 
 #define CENTRAL_ID 0x00
+#define INTERVALO_ONLINE 1000 //Intervalo para enviar sinal de online
+
 String inputString = "";// a string to hold incoming data
 
 // the cs pin of the version after v1.1 is default to D9
 // v0.9b and v1.0 is default D10
 const int SPI_CS_PIN = 10;
 
-MCP_CAN CAN(SPI_CS_PIN);                                    // Set CS pin
+MCP_CAN CAN(SPI_CS_PIN);// Set CS pin
 
 /**
    Estrutura com os estados das entradas e saídas de uma placa remota
@@ -69,6 +71,8 @@ void loop()
 {
   unsigned char len = 0;
   unsigned char rawMsg[8];
+  static unsigned long previousMillis = 0;        // will store last time LED was updated
+
 
   if (CAN.checkReceive() == CAN_MSGAVAIL) {
 
@@ -90,6 +94,12 @@ void loop()
       if (i < len - 2)Serial.print(F(", "));
     }
     Serial.print(F("]}\n"));
+  }
+  
+  //envia sinal de online a cada tempo predeterminado
+  if (millis() - previousMillis >= INTERVALO_ONLINE) {    
+    previousMillis = millis();
+    isOnline();
   }
 }
 
@@ -194,8 +204,8 @@ byte extraiComando() {
           break;
         }
     }
-} else {
-  //envia pela rede
-  CAN.sendMsgBuf(CENTRAL_ID, 0, sizeof(msg), msg);
-}
+  } else {
+    //envia pela rede
+    CAN.sendMsgBuf(CENTRAL_ID, 0, sizeof(msg), msg);
+  }
 }
