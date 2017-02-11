@@ -8,7 +8,7 @@
 //#define DEBUG
 
 #define CENTRAL_ID 0x00
-#define INTERVALO_ONLINE 1000 //Intervalo para enviar sinal de online
+#define INTERVALO_ONLINE 500 //Intervalo para enviar sinal de online
 
 String inputString = "";// a string to hold incoming data
 
@@ -65,6 +65,7 @@ void isOnline() {
   Serial.print(F(", \"codigo\":"));
   Serial.print(ONLINE);
   Serial.print(F("}\n"));
+  Serial.flush();
 }
 
 void loop()
@@ -94,6 +95,7 @@ void loop()
       if (i < len - 2)Serial.print(F(", "));
     }
     Serial.print(F("]}\n"));
+    Serial.flush();
   }
   
   //envia sinal de online a cada tempo predeterminado
