@@ -1,31 +1,23 @@
-//https://github.com/Seeed-Studio/CAN_BUS_Shield
-
-#include <SPI.h>
-#include "mcp_can.h"
 #include <avr/wdt.h>
-#include "ctmNectar.h"
-
-//#define DEBUG
 
 #define CENTRAL_ID 0x00
 #define INTERVALO_ONLINE 500 //Intervalo para enviar sinal de online
 
-String inputString = "";// a string to hold incoming data
+#define ESPECIAL 9999
+#define ONLINE 1
 
-// the cs pin of the version after v1.1 is default to D9
-// v0.9b and v1.0 is default D10
-const int SPI_CS_PIN = 6;
-
-MCP_CAN CAN(SPI_CS_PIN);// Set CS pin
+String outputString = String("");
 
 /**
    Estrutura com os estados das entradas e saídas de uma placa remota
+   idRede/tipoGrandeza/grandeza/valor
 */
-struct MENSAGEM {
-  unsigned int id;
-  unsigned char codigo;
-  unsigned char msg[7];
-} canMsg;
+struct Mensagem {
+  uint16_t idRede;
+  uint16_t tipoGrandeza;
+  uint16_t grandeza;
+  float valor;
+};
 
 /**
    Função para resetar o programa
@@ -43,65 +35,49 @@ void setup()
 {
   Serial.begin(115200);
 
-  inputString.reserve(20);
-
-  if (CAN_OK != CAN.begin(CAN_100KBPS))              // init can bus : baudrate = 500k
-  {
-#if defined(DEBUG)
-    Serial.println("CAN BUS Shield init fail");
-    Serial.println(" Init CAN BUS Shield again");
-    delay(250);
-    resetSensor();
-#endif
-  }
-
   //envia sinal de online
   isOnline();
+
+  randomSeed(1);
 }
 
 void isOnline() {
-  Serial.print(F("{\"id\":"));
-  Serial.print(CENTRAL_ID);
-  Serial.print(F(", \"codigo\":"));
-  Serial.print(ONLINE);
-  Serial.print(F("}\n"));
-  Serial.flush();
+  Mensagem msg;
+
+  msg.idRede = CENTRAL_ID;
+  msg.tipoGrandeza = ESPECIAL;
+  msg.grandeza = ONLINE;
+  msg.valor = ONLINE;
+  enviaDados(&msg);
+
+}
+
+void enviaDados(Mensagem *msg) {
+  outputString = String("");
+  outputString += msg->idRede;
+  outputString += '\\';
+  outputString += msg->tipoGrandeza;
+  outputString += '\\';
+  outputString += msg->grandeza;
+  outputString += '\\';
+  outputString += msg->valor;
+  Serial.println(outputString);
 }
 
 void loop()
 {
-  unsigned char len = 0;
-  unsigned char rawMsg[8];
-  static unsigned long previousMillis = 0;        // will store last time LED was updated
-
-
-  if (CAN.checkReceive() == CAN_MSGAVAIL) {
-
-    CAN.readMsgBuf(&len, rawMsg);    // read data,  len: data length, buf: data buf
-
-    canMsg.id = CAN.getCanId();
-    canMsg.codigo = rawMsg[0];
-    for (char i = 1; i < len; i++) {
-      canMsg.msg[i - 1] = rawMsg[i];
-    }
-
-    Serial.print(F("{\"id\":"));
-    Serial.print(canMsg.id);
-    Serial.print(F(", \"codigo\":"));
-    Serial.print(canMsg.codigo);
-    Serial.print(F(", \"msg\":["));
-    for (char i = 0; i < len - 1; i++) {
-      Serial.print(canMsg.msg[i]);
-      if (i < len - 2)Serial.print(F(", "));
-    }
-    Serial.print(F("]}\n"));
-    Serial.flush();
-  }
-  
+  static Mensagem msg;
+  static unsigned long previousMillis = 0;
   //envia sinal de online a cada tempo predeterminado
-  if (millis() - previousMillis >= INTERVALO_ONLINE) {    
+  if (millis() - previousMillis >= INTERVALO_ONLINE) {
+    
     previousMillis = millis();
-    isOnline();
+    msg.idRede = random(1, 2);
+    msg.tipoGrandeza = 3202;
+    msg.grandeza = random(3303, 3304);
+    msg.valor = random(1, 5000) / 100.0;
+    enviaDados(&msg);
+    
   }
 }
 
