@@ -8,7 +8,7 @@
 //#define DEBUG
 
 #define CENTRAL_ID 0x00
-#define INTERVALO_ONLINE 500 //Intervalo para enviar sinal de online
+#define INTERVALO_ONLINE 1000 //Intervalo para enviar sinal de online
 
 String inputString = "";// a string to hold incoming data
 
@@ -60,11 +60,16 @@ void setup()
 }
 
 void isOnline() {
-  Serial.print(F("{\"id\":"));
+  return;
+  Serial.print(F("["));
   Serial.print(CENTRAL_ID);
-  Serial.print(F(", \"codigo\":"));
-  Serial.print(ONLINE);
-  Serial.print(F("}\n"));
+  Serial.print(F("/"));
+  Serial.print(F("9999"));
+  Serial.print(F("/"));
+  Serial.print(F("1"));
+  Serial.print(F("/"));
+  Serial.print(F("1"));
+  Serial.println(F("]"));
   Serial.flush();
 }
 
@@ -78,30 +83,56 @@ void loop()
   if (CAN.checkReceive() == CAN_MSGAVAIL) {
 
     CAN.readMsgBuf(&len, rawMsg);    // read data,  len: data length, buf: data buf
-
-    canMsg.id = CAN.getCanId();
-    canMsg.codigo = rawMsg[0];
-    for (char i = 1; i < len; i++) {
-      canMsg.msg[i - 1] = rawMsg[i];
+    Serial.print("[");
+    Serial.print(CAN.getCanId());
+    Serial.print("/");
+    if (rawMsg[0] == 99) {
+      Serial.print("9999");
+    }
+    else {
+      Serial.print(rawMsg[0] + 3200);
     }
 
-    Serial.print(F("{\"id\":"));
-    Serial.print(canMsg.id);
-    Serial.print(F(", \"codigo\":"));
-    Serial.print(canMsg.codigo);
-    Serial.print(F(", \"msg\":["));
-    for (char i = 0; i < len - 1; i++) {
-      Serial.print(canMsg.msg[i]);
-      if (i < len - 2)Serial.print(F(", "));
+    Serial.print("/");
+    //se for valor analógico
+    if (rawMsg[0] == 2) {
+      Serial.print(rawMsg[1] + 3300);
+      Serial.print("/");
+      Serial.print((int16_t)word(rawMsg[2], rawMsg[3]) / 100.0);
+    } else {
+      Serial.print(rawMsg[1]);
+      Serial.print("/");
+      Serial.print(rawMsg[2]);
     }
-    Serial.print(F("]}\n"));
+    Serial.println("]");
     Serial.flush();
   }
-  
+
   //envia sinal de online a cada tempo predeterminado
-  if (millis() - previousMillis >= INTERVALO_ONLINE) {    
+  if (millis() - previousMillis >= INTERVALO_ONLINE) {
     previousMillis = millis();
     isOnline();
+
+    unsigned char msg[8];
+    randomSeed(analogRead(A0));
+    msg[0] = (uint8_t)random(0, 6);
+    msg[1] = (uint8_t)random(0, 3);
+
+    if (msg[1] == 0) {
+      msg[2] = (uint8_t)random(0, 8);
+    }
+    if (msg[1] == 1) {
+      msg[2] = (uint8_t)random(0, 8);
+      msg[3] = (uint8_t)random(0, 2);
+    }
+    if (msg[1] == 2) {
+     // msg[2] = (uint8_t)random(3, 5);
+      //if (previousMillis % 3 == 0) {
+        msg[2] = (uint8_t)20;
+      //}
+    }
+
+    CAN.sendMsgBuf(CENTRAL_ID, 0, sizeof(msg), msg);
   }
 }
 
