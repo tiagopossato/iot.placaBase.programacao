@@ -95,7 +95,7 @@ void loop()
     {
       Serial.print(rawMsg[1] + 3300);
       Serial.print("/");
-      Serial.print(word(rawMsg[2], rawMsg[3]) / 100.0);
+      Serial.print((int16_t)(word(rawMsg[2], rawMsg[3])) / 100.0);
     }
     else
     {
@@ -143,21 +143,35 @@ void serialEvent()
 
 void trataComando()
 {
-  unsigned char sendMsg[8];
+  unsigned char sendMsg[] = {0, 0, 0, 0, 0, 0, 0, 0};
   //idRede
   sendMsg[0] = (uint8_t)extraiCodigo(input);
   //tipoGrandeza
   sendMsg[1] = (uint8_t)(extraiCodigo(input) - 3200);
 
-  //verifica se a grandeza é do tipo saidaDigital
-  if (sendMsg[1] == 1)
+  //verifica se a grandeza é do tipo entradaDigital
+  if (sendMsg[1] == 0)
   {
+    //pega a entrada que será lida
     sendMsg[2] = (uint8_t)extraiCodigo(input);
-    sendMsg[3] = (uint8_t)extraiCodigo(input);
   }
-  else
-  {
-    sendMsg[2] = (uint8_t)(extraiCodigo(input) - 3300);
+  else {
+    //verifica se a grandeza é do tipo saidaDigital
+    if (sendMsg[1] == 1)
+    {
+      //pega a saída que será alterada
+      sendMsg[2] = (uint8_t)extraiCodigo(input);
+      //pega o valor a ser escrito na saída
+      // em uma variável de 16 bits,
+      //para aumentar a compatibilidade do codigo dos transdutores
+      int16_t valor = (int16_t)(extraiCodigo(input) * 100);
+      sendMsg[3] = highByte(valor);
+      sendMsg[4] = lowByte(valor);
+    }
+    else
+    {
+      sendMsg[2] = (uint8_t)(extraiCodigo(input) - 3300);
+    }
   }
 
   CAN.sendMsgBuf(CENTRAL_ID, 0, sizeof(sendMsg), sendMsg);
