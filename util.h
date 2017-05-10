@@ -1,5 +1,5 @@
 float extraiCodigo(char *entrada) {
-  char i = 0;
+  unsigned char i = 0;
   String tmp;
   tmp.reserve(5);
   for (i = 0;; i++) {
